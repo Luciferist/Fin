@@ -45,6 +45,20 @@ def total_revenue(data: dict, financial_index):
     Returns:
     - float: The net revenue value from the financial data.
     """
+    try:
+        financial_entry = data["financials"][financial_index]
+
+        if "pnl" in financial_entry and "lineItems" in financial_entry["pnl"]:
+            net_revenue = financial_entry["pnl"]["lineItems"].get("net_revenue", 0.0)
+            net_revenue = float(net_revenue)
+            return net_revenue
+        else:
+            print("Error: 'pnl' or 'lineItems' not found in the financial entry.")
+            return 0.0
+    except (KeyError, IndexError) as e:
+        print(f"Error: {e}")
+        return 0.0
+    
 
 
 def total_borrowing(data: dict, financial_index):
@@ -62,6 +76,30 @@ def total_borrowing(data: dict, financial_index):
     Returns:
     - float: The ratio of total borrowings to total revenue.
     """
+    try:
+        
+        financial_entry = data["financials"][financial_index]
+        if "bs" in financial_entry:
+            balance_sheet = financial_entry["bs"]
+            total_borrowings = (
+                balance_sheet["liabilities"]["long_term_borrowings"]
+                + balance_sheet["liabilities"]["short_term_borrowings"]
+            )
+            total_revenue_value = total_revenue(data, financial_index)
+
+            if total_revenue_value != 0:
+                borrowing_to_revenue_ratio = total_borrowings / total_revenue_value
+                return borrowing_to_revenue_ratio
+            else:
+                print("Error: Total revenue is zero, cannot calculate the ratio.")
+                return 0.0
+        else:
+            print("Error: 'bs' not found in the financial entry.")
+            return 0.0
+    except (KeyError, IndexError) as e:
+        print(f"Error: {e}")
+        return 0.0
+
 
 
 def iscr_flag(data: dict, financial_index):
@@ -79,6 +117,12 @@ def iscr_flag(data: dict, financial_index):
     Returns:
     - FLAGS.GREEN or FLAGS.RED: The flag color based on the ISCR value.
     """
+     iscr_value = iscr(data, financial_index)
+
+    if iscr_value >= 2:
+        return FLAGS.GREEN
+    else:
+        return FLAGS.RED
 
 
 def total_revenue_5cr_flag(data: dict, financial_index):
@@ -96,6 +140,12 @@ def total_revenue_5cr_flag(data: dict, financial_index):
     Returns:
     - FLAGS.GREEN or FLAGS.RED: The flag color based on the total revenue.
     """
+    total_revenue_value = total_revenue(data, financial_index)
+
+    if total_revenue_value >= 50000000:
+        return FLAGS.GREEN
+    else:
+        return FLAGS.RED
 
 
 def iscr(data: dict, financial_index):
@@ -113,6 +163,30 @@ def iscr(data: dict, financial_index):
     Returns:
     - float: The ISCR value.
     """
+    try:
+        
+        financial_entry = data["financials"][financial_index]
+
+        
+        if "pnl" in financial_entry:
+            pnl_section = financial_entry["pnl"] 
+            if "lineItems" in pnl_section:
+                line_items = pnl_section["lineItems"]
+                profit_before_interest_and_tax = line_items.get("profit_before_interest_and_tax", 0.0)
+                depreciation = line_items.get("depreciation", 0.0)
+                interest_expense = line_items.get("interest", 0.0)
+                iscr_value = (profit_before_interest_and_tax + depreciation + 1) / (interest_expense + 1)
+
+                return iscr_value
+            else:
+                print("Error: 'lineItems' not found in the pnl section.")
+                return 0.0
+        else:
+            print("Error: 'pnl' not found in the financial entry.")
+            return 0.0
+    except (KeyError, IndexError) as e:
+        print(f"Error: {e}")
+        return 0.0
 
 
 def borrowing_to_revenue_flag(data: dict, financial_index):
@@ -130,4 +204,9 @@ def borrowing_to_revenue_flag(data: dict, financial_index):
     Returns:
     - FLAGS.GREEN or FLAGS.AMBER: The flag color based on the borrowing to revenue ratio.
     """
+    borrowing_to_revenue_ratio = total_borrowing(data, financial_index)
+    if borrowing_to_revenue_ratio <= 0.25:
+        return FLAGS.GREEN
+    else:
+        return FLAGS.AMBER
 
